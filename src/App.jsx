@@ -827,6 +827,14 @@ function App() {
   };
 
   const handleSignOut = async () => {
+    const confirmed = await requestConfirmation({
+      title: 'Sign out?',
+      message: 'You will need to sign in again to access your cloud recordings.',
+      confirmLabel: 'Sign out'
+    });
+
+    if (!confirmed) return;
+
     try {
       const res = await fetch('/api/auth/logout', { method: 'POST' });
       const data = await res.json();
@@ -834,9 +842,11 @@ function App() {
         setCurrentUser(null);
         setLibraryType('local');
         setActiveTab('home');
+      } else {
+        throw new Error(data.error || 'Sign out request failed.');
       }
     } catch (err) {
-      showAlert('Sign out request failed.');
+      showAlert(err.message || 'Sign out request failed.');
     }
   };
 
