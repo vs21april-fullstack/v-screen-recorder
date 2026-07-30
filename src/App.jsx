@@ -169,6 +169,10 @@ function App() {
   const [shareErrorMsg, setShareErrorMsg] = useState('');
   const [shareItemName, setShareItemName] = useState('');
 
+  // Custom alert dialog
+  const [customAlert, setCustomAlert] = useState(null);
+  const [customConfirm, setCustomConfirm] = useState(null);
+
   // Refs for background control
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
@@ -181,6 +185,33 @@ function App() {
   const analyserRef = useRef(null);
   const visualizerCanvasRef = useRef(null);
   const animationFrameIdRef = useRef(null);
+  const confirmationResolverRef = useRef(null);
+
+  const showAlert = (message, type = 'error') => {
+    setCustomAlert({
+      message: String(message || 'Something went wrong.'),
+      type,
+      title: type === 'success' ? 'Success' : 'Something went wrong'
+    });
+  };
+
+  const requestConfirmation = (options) => (
+    new Promise((resolve) => {
+      confirmationResolverRef.current = resolve;
+      setCustomConfirm({
+        title: 'Please confirm',
+        confirmLabel: 'Continue',
+        destructive: false,
+        ...options
+      });
+    })
+  );
+
+  const closeConfirmation = (confirmed) => {
+    confirmationResolverRef.current?.(confirmed);
+    confirmationResolverRef.current = null;
+    setCustomConfirm(null);
+  };
 
   // 1. Fetch Session on mount
   useEffect(() => {
@@ -270,12 +301,12 @@ function App() {
         setSyncProgress(Math.round(((i + 1) / total) * 100));
       }
 
-      alert('All local recordings synced successfully to V-Screen Recorder Cloud!');
+      showAlert('All local recordings synced successfully to V-Screen Recorder Cloud!', 'success');
       setLocalUnsyncedCount(0);
       setHistoryPage(1);
       loadHistory();
     } catch (err) {
-      alert(`Sync failed: ${err.message}`);
+      showAlert(`Sync failed: ${err.message}`);
     } finally {
       setIsSyncing(false);
     }
@@ -312,7 +343,7 @@ function App() {
     }
   }, [activeTab, libraryType, historyPage, searchQuery, startDate, endDate]);
 
-  const handleTabChange = (tabName) => {
+  const handleTabChange = async (tabName) => {
     // Route Guard: redirect unauthenticated users to sign-in auth tab
     if (!currentUser && (tabName === 'record' || tabName === 'history')) {
       setActiveTab('auth');
@@ -320,7 +351,11 @@ function App() {
     }
 
     if (tabName !== 'record' && (recorderStatus === 'recording' || recorderStatus === 'paused')) {
-      const confirmLeave = window.confirm('Recording is in progress. Leaving will stop and save the session. Proceed?');
+      const confirmLeave = await requestConfirmation({
+        title: 'Leave recording?',
+        message: 'Recording is in progress. Leaving will stop and save the session.',
+        confirmLabel: 'Stop and leave'
+      });
       if (!confirmLeave) return;
       stopRecording();
     }
@@ -545,7 +580,7 @@ function App() {
 
     } catch (err) {
       console.error('Failed to capture stream:', err);
-      alert(`Could not start recording: ${err.message || err}`);
+      showAlert(`Could not start recording: ${err.message || err}`);
       setRecorderStatus('idle');
       if (captureSource === 'camera') setupCameraPreview();
     }
@@ -674,7 +709,7 @@ function App() {
         const data = await res.json();
         if (data.success) {
           setIsShareOpen(false);
-          alert('Recording uploaded and saved successfully to V-Screen Recorder Cloud Library!');
+          showAlert('Recording uploaded and saved successfully to V-Screen Recorder Cloud Library!', 'success');
           
           setCurrentBlob(null);
           setCurrentBlobUrl('');
@@ -707,7 +742,7 @@ function App() {
       }
     } catch (err) {
       setIsShareOpen(false);
-      alert('Error saving video: ' + err.message);
+      showAlert('Error saving video: ' + err.message);
     }
   };
 
@@ -762,7 +797,7 @@ function App() {
         setActiveTab('home');
       }
     } catch (err) {
-      alert('Sign out request failed.');
+      showAlert('Sign out request failed.');
     }
   };
 
@@ -780,13 +815,20 @@ function App() {
         setReviewVideoTitle(title);
         setIsReviewOpen(true);
       } catch (e) {
-        alert(e.message);
+        showAlert(e.message);
       }
     }
   };
 
   const handleDeleteItem = async (id) => {
-    if (window.confirm('Are you sure you want to permanently delete this recording?')) {
+    const confirmed = await requestConfirmation({
+      title: 'Delete recording?',
+      message: 'This recording will be permanently deleted. This action cannot be undone.',
+      confirmLabel: 'Delete recording',
+      destructive: true
+    });
+
+    if (confirmed) {
       try {
         if (libraryType === 'cloud') {
           const res = await fetch(`/api/recordings?id=${id}`, { method: 'DELETE' });
@@ -798,7 +840,7 @@ function App() {
         }
         loadHistory();
       } catch (err) {
-        alert(err.message);
+        showAlert(err.message);
       }
     }
   };
@@ -826,7 +868,7 @@ function App() {
         setTimeout(() => URL.revokeObjectURL(url), 100);
       }
     } catch (e) {
-      alert('Download failed: ' + e.message);
+      showAlert('Download failed: ' + e.message);
     }
   };
 
@@ -895,13 +937,17 @@ function App() {
       setEditingId(null);
       loadHistory();
     } catch (err) {
-      alert(err.message);
+      showAlert(err.message);
     }
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    alert('Link copied to clipboard!');
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showAlert('Link copied to clipboard!', 'success');
+    } catch (err) {
+      showAlert('Could not copy the link. Please copy it manually.');
+    }
   };
 
   return (
@@ -1709,6 +1755,73 @@ function App() {
           </div>
         </div>
       </footer>
+
+      {/* ==================== CUSTOM ALERT DIALOG ==================== */}
+      {customAlert && (
+        <div className="custom-alert-overlay" onClick={() => setCustomAlert(null)}>
+          <div
+            className={`custom-alert-box ${customAlert.type}`}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="custom-alert-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="custom-alert-icon" aria-hidden="true">
+              {customAlert.type === 'success' ? <CheckIcon /> : <WarningIcon />}
+            </div>
+            <div className="custom-alert-content">
+              <h3 id="custom-alert-title">{customAlert.title}</h3>
+              <p>{customAlert.message}</p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary custom-alert-action"
+              onClick={() => setCustomAlert(null)}
+              autoFocus
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== CUSTOM CONFIRM DIALOG ==================== */}
+      {customConfirm && (
+        <div className="custom-alert-overlay" onClick={() => closeConfirmation(false)}>
+          <div
+            className={`custom-alert-box confirm ${customConfirm.destructive ? 'destructive' : ''}`}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="custom-confirm-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="custom-alert-icon" aria-hidden="true">
+              <WarningIcon />
+            </div>
+            <div className="custom-alert-content">
+              <h3 id="custom-confirm-title">{customConfirm.title}</h3>
+              <p>{customConfirm.message}</p>
+            </div>
+            <div className="custom-confirm-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => closeConfirmation(false)}
+                autoFocus
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`btn ${customConfirm.destructive ? 'custom-alert-destructive' : 'btn-primary'}`}
+                onClick={() => closeConfirmation(true)}
+              >
+                {customConfirm.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ==================== MODAL: PLAYBACK REVIEW ==================== */}
       {isReviewOpen && (

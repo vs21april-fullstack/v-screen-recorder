@@ -1160,6 +1160,98 @@ html, body {
   padding: 30px;
 }
 
+/* Custom alert and confirmation dialogs */
+.custom-alert-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(4, 4, 8, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+.custom-alert-box {
+  width: min(100%, 440px);
+  padding: 32px;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  text-align: center;
+  background: rgba(18, 18, 30, 0.96);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  border-radius: 22px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.72);
+  animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.custom-alert-box.success {
+  border-color: rgba(16, 185, 129, 0.38);
+}
+
+.custom-alert-box.confirm {
+  border-color: rgba(0, 240, 255, 0.25);
+}
+
+.custom-alert-box.confirm.destructive {
+  border-color: rgba(239, 68, 68, 0.38);
+}
+
+.custom-alert-icon {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.custom-alert-box.success .custom-alert-icon {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.custom-alert-box.confirm:not(.destructive) .custom-alert-icon {
+  background: rgba(0, 240, 255, 0.08);
+}
+
+.custom-alert-content h3 {
+  margin: 0 0 8px;
+  color: #fff;
+  font-size: 22px;
+}
+
+.custom-alert-content p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
+.custom-alert-action {
+  min-width: 120px;
+}
+
+.custom-confirm-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.custom-alert-destructive {
+  color: #fff;
+  background: #dc2626;
+  border-color: #ef4444;
+}
+
+.custom-alert-destructive:hover {
+  background: #ef4444;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
 /* Custom Playback Modal */
 .modal-video-container {
   width: 100%;
