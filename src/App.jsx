@@ -989,6 +989,18 @@ function App() {
     }
   };
 
+  const closeReviewPlayer = () => {
+    setIsReviewOpen(false);
+    setReviewVideoUrl('');
+
+    const pageUrl = new URL(window.location.href);
+    pageUrl.searchParams.delete('video');
+    pageUrl.searchParams.delete('title');
+    window.history.replaceState({}, '', `${pageUrl.pathname}${pageUrl.search}${pageUrl.hash}`);
+
+    handleTabChange('history');
+  };
+
   return (
     <div className="app-wrapper">
       <div className="ambient-glow-1"></div>
@@ -1864,13 +1876,14 @@ function App() {
 
       {/* ==================== MODAL: PLAYBACK REVIEW ==================== */}
       {isReviewOpen && (
-        <div className="modal-overlay" onClick={() => { setIsReviewOpen(false); setReviewVideoUrl(''); }}>
+        <div className="modal-overlay" onClick={closeReviewPlayer}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">{reviewVideoTitle}</h3>
               <button 
-                onClick={() => { setIsReviewOpen(false); setReviewVideoUrl(''); }} 
+                onClick={closeReviewPlayer}
                 className="modal-close-btn"
+                aria-label="Close player and return to library"
               >
                 <CloseIcon />
               </button>
@@ -1925,7 +1938,7 @@ function App() {
               ) : (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                   <button 
-                    onClick={() => { setIsReviewOpen(false); setReviewVideoUrl(''); }} 
+                    onClick={closeReviewPlayer}
                     className="btn btn-secondary"
                   >
                     Close Player
