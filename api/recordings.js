@@ -1,10 +1,10 @@
-import { verifySessionToken } from './utils/crypto';
+import { verifySessionToken } from './utils/crypto.js';
 import { 
   getUserRecordings, 
   createRecording, 
   deleteUserRecording, 
   renameUserRecording 
-} from './utils/db';
+} from './utils/db.js';
 
 // Helper to get session user
 function getSessionUser(req) {

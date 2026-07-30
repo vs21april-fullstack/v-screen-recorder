@@ -1,4 +1,4 @@
-import { verifySessionToken } from '../utils/crypto';
+import { verifySessionToken } from '../utils/crypto.js';
 
 // Parse raw cookie headers helper
 function getCookie(cookieHeader, name) {

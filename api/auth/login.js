@@ -1,5 +1,5 @@
-import { getUserByEmail } from '../utils/db';
-import { verifyPassword, createSessionToken } from '../utils/crypto';
+import { getUserByEmail } from '../utils/db.js';
+import { verifyPassword, createSessionToken } from '../utils/crypto.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
