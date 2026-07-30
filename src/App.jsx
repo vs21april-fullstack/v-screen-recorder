@@ -99,6 +99,13 @@ const formatTime = (durationInSeconds) => {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
+const createPlayerUrl = (videoUrl, title) => {
+  const playerUrl = new URL(window.location.origin);
+  playerUrl.searchParams.set('video', videoUrl);
+  playerUrl.searchParams.set('title', title || 'Shared recording');
+  return playerUrl.toString();
+};
+
 function App() {
   // Navigation
   const [activeTab, setActiveTab] = useState('home');
@@ -226,6 +233,25 @@ function App() {
       cleanupAudioVisualizer();
       clearInterval(timerIntervalRef.current);
     };
+  }, []);
+
+  // Open public shared links directly in the built-in video player.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedVideoUrl = params.get('video');
+
+    if (!sharedVideoUrl) return;
+
+    try {
+      const parsedUrl = new URL(sharedVideoUrl);
+      if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') return;
+
+      setReviewVideoUrl(parsedUrl.toString());
+      setReviewVideoTitle(params.get('title') || 'Shared recording');
+      setIsReviewOpen(true);
+    } catch (err) {
+      console.warn('Invalid shared video URL:', err);
+    }
   }, []);
 
   const checkSession = async () => {
@@ -876,7 +902,7 @@ function App() {
     if (libraryType === 'cloud' && videoUrl) {
       setShareItemName(title);
       setShareLink(videoUrl);
-      setShareViewLink(videoUrl.replace('/dl/', '/'));
+      setShareViewLink(createPlayerUrl(videoUrl, title));
       setSharingStatus('success');
       setIsShareOpen(true);
       return;
@@ -899,7 +925,7 @@ function App() {
 
       if (uploadRes.success) {
         setShareLink(uploadRes.url); 
-        setShareViewLink(uploadRes.viewUrl); 
+        setShareViewLink(createPlayerUrl(uploadRes.url, title));
         setSharingStatus('success');
       } else {
         setSharingStatus('error');
