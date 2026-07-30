@@ -7,6 +7,26 @@ export const config = {
   },
 };
 
+async function getTmpfilesDirectUrl(landingUrl) {
+  const landingResponse = await fetch(landingUrl);
+  if (!landingResponse.ok) throw new Error('Unable to resolve the uploaded file URL.');
+
+  const html = await landingResponse.text();
+  const match = html.match(/<a[^>]+class=["']download["'][^>]+href=["']([^"']+)["']/i);
+  if (!match) throw new Error('Storage provider did not return a direct download URL.');
+
+  const directUrl = new URL(match[1], landingUrl);
+  if (
+    directUrl.protocol !== 'https:' ||
+    directUrl.hostname !== 'tmpfiles.org' ||
+    !directUrl.pathname.startsWith('/dl/')
+  ) {
+    throw new Error('Storage provider returned an invalid download URL.');
+  }
+
+  return directUrl.toString();
+}
+
 export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -65,10 +85,10 @@ export default async function handler(req, res) {
     const result = await response.json();
 
     if (result.status === 'success' && result.data && result.data.url) {
-      // tmpfiles.org URLs look like: https://tmpfiles.org/12345/filename
-      // The direct play link (with raw media headers) is: https://tmpfiles.org/dl/12345/filename
       const rawUrl = result.data.url;
-      const directUrl = rawUrl.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+      // tmpfiles direct links contain a short-lived signature that must be
+      // extracted from the landing page; inserting "/dl/" is not sufficient.
+      const directUrl = await getTmpfilesDirectUrl(rawUrl);
 
       return res.status(200).json({
         success: true,

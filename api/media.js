@@ -3,6 +3,35 @@ import { Readable } from 'node:stream';
 const ALLOWED_HOST = 'tmpfiles.org';
 const ALLOWED_PATH_PREFIX = '/dl/';
 
+function validateTmpfilesUrl(value, requireDirectPath = true) {
+  const url = new URL(value);
+  if (
+    url.protocol !== 'https:' ||
+    url.hostname !== ALLOWED_HOST ||
+    (requireDirectPath && !url.pathname.startsWith(ALLOWED_PATH_PREFIX))
+  ) {
+    throw new Error('Unsupported media URL.');
+  }
+  return url;
+}
+
+async function resolveLegacyDirectUrl(mediaUrl) {
+  const pathParts = mediaUrl.pathname.split('/').filter(Boolean);
+  if (pathParts.length >= 4) return mediaUrl;
+
+  const landingUrl = new URL(mediaUrl);
+  landingUrl.pathname = `/${pathParts.slice(1).join('/')}`;
+
+  const landingResponse = await fetch(landingUrl);
+  if (!landingResponse.ok) throw new Error('Temporary video landing page is unavailable.');
+
+  const html = await landingResponse.text();
+  const match = html.match(/<a[^>]+class=["']download["'][^>]+href=["']([^"']+)["']/i);
+  if (!match) throw new Error('Temporary video download link was not found.');
+
+  return validateTmpfilesUrl(new URL(match[1], landingUrl));
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', ['GET', 'HEAD']);
@@ -12,20 +41,14 @@ export default async function handler(req, res) {
   let mediaUrl;
 
   try {
-    mediaUrl = new URL(req.query.url);
+    mediaUrl = validateTmpfilesUrl(req.query.url);
   } catch (error) {
-    return res.status(400).json({ success: false, error: 'A valid media URL is required.' });
-  }
-
-  if (
-    mediaUrl.protocol !== 'https:' ||
-    mediaUrl.hostname !== ALLOWED_HOST ||
-    !mediaUrl.pathname.startsWith(ALLOWED_PATH_PREFIX)
-  ) {
-    return res.status(400).json({ success: false, error: 'Unsupported media URL.' });
+    return res.status(400).json({ success: false, error: error.message || 'A valid media URL is required.' });
   }
 
   try {
+    mediaUrl = await resolveLegacyDirectUrl(mediaUrl);
+
     const upstreamHeaders = {};
     if (req.headers.range) upstreamHeaders.Range = req.headers.range;
 
