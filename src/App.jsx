@@ -88,6 +88,17 @@ const LogoIcon = () => (
   <div className="logo-graphic"></div>
 );
 
+const formatTime = (durationInSeconds) => {
+  const parsedDuration = Number(durationInSeconds);
+  const totalSeconds = Number.isFinite(parsedDuration)
+    ? Math.max(0, Math.floor(parsedDuration))
+    : 0;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
+
 function App() {
   // Navigation
   const [activeTab, setActiveTab] = useState('home');
