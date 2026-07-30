@@ -2,7 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import pg from 'pg';
 
-const usePostgres = !!process.env.DATABASE_URL;
+const dbUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+const usePostgres = !!dbUrl;
 let pool = null;
 
 // JSON File Database configuration (local fallback)
@@ -13,8 +14,8 @@ async function initDB() {
   if (usePostgres) {
     if (!pool) {
       pool = new pg.Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false }
+        connectionString: dbUrl,
+        ssl: dbUrl.includes('localhost') ? false : { rejectUnauthorized: false }
       });
 
       // Create Tables automatically if they don't exist
