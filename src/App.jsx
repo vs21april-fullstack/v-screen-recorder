@@ -106,6 +106,19 @@ const createPlayerUrl = (videoUrl, title) => {
   return playerUrl.toString();
 };
 
+const createPlayableVideoUrl = (videoUrl) => {
+  try {
+    const parsedUrl = new URL(videoUrl);
+    if (parsedUrl.hostname === 'tmpfiles.org' && parsedUrl.pathname.startsWith('/dl/')) {
+      return `/api/media?url=${encodeURIComponent(parsedUrl.toString())}`;
+    }
+  } catch (err) {
+    return videoUrl;
+  }
+
+  return videoUrl;
+};
+
 function App() {
   // Navigation
   const [activeTab, setActiveTab] = useState('home');
@@ -246,7 +259,7 @@ function App() {
       const parsedUrl = new URL(sharedVideoUrl);
       if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') return;
 
-      setReviewVideoUrl(parsedUrl.toString());
+      setReviewVideoUrl(createPlayableVideoUrl(parsedUrl.toString()));
       setReviewVideoTitle(params.get('title') || 'Shared recording');
       setIsReviewOpen(true);
     } catch (err) {
@@ -830,7 +843,7 @@ function App() {
   // Action methods on History Items (Dynamic based on Local vs Cloud mode)
   const handlePlayRecording = async (id, title, videoUrl) => {
     if (libraryType === 'cloud' && videoUrl) {
-      setReviewVideoUrl(videoUrl);
+      setReviewVideoUrl(createPlayableVideoUrl(videoUrl));
       setReviewVideoTitle(title);
       setIsReviewOpen(true);
     } else {
@@ -1869,6 +1882,7 @@ function App() {
                   controls 
                   autoPlay 
                   className="modal-video"
+                  onError={() => showAlert('This temporary video is unavailable or has expired. Please upload the recording again.')}
                 />
               </div>
 
